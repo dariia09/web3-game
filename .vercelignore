@@ -1,0 +1,6 @@
+.secrets
+.env*
+!.env.example
+node_modules
+docs
+*.zip

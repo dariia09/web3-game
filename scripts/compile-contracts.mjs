@@ -1,0 +1,10 @@
+import fs from 'node:fs';
+import solc from 'solc';
+const file='RiverEvents.sol';
+const source=fs.readFileSync(new URL('../contracts/'+file,import.meta.url),'utf8');
+const result=JSON.parse(solc.compile(JSON.stringify({language:'Solidity',sources:{[file]:{content:source}},settings:{optimizer:{enabled:true,runs:200},outputSelection:{'*':{'*':['abi','evm.bytecode.object']}}}})));
+for(const e of result.errors||[]) console[e.severity==='error'?'error':'warn'](e.formattedMessage);
+if(result.errors?.some(e=>e.severity==='error'))process.exit(1);
+const dir=new URL('../contracts/artifacts/',import.meta.url);fs.mkdirSync(dir,{recursive:true});
+for(const [name,c] of Object.entries(result.contracts[file]))fs.writeFileSync(new URL(name+'.json',dir),JSON.stringify({contractName:name,compiler:solc.version(),abi:c.abi,bytecode:'0x'+c.evm.bytecode.object},null,2));
+console.log('Compiled RiverEvents: ABI and bytecode saved in contracts/artifacts. No deployment performed.');

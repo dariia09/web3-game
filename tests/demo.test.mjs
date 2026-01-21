@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {resolveReceipt,collectCircuit,showdownPoints,dailyCredit} from '../src/lib/game/demo-engine.ts';
+import {deck} from '../src/lib/game/cards.ts';
+const receipt=kind=>({id:'DEMO-TEST',kind,amount:500,status:'pending',time:'2026-01-01T00:00:00Z'});
+test('deposit confirmation credits escrow exactly once',()=>{const r=resolveReceipt(0,[receipt('deposit')],'DEMO-TEST',true);assert.equal(r.escrow,500);assert.equal(r.credit,0);const again=resolveReceipt(r.escrow,r.receipts,'DEMO-TEST',true);assert.equal(again.escrow,500);assert.equal(again.credit,0)});
+test('rejected deposit returns reserved balance once',()=>{const r=resolveReceipt(0,[receipt('deposit')],'DEMO-TEST',false);assert.equal(r.credit,500);assert.equal(r.escrow,0);assert.equal(resolveReceipt(r.escrow,r.receipts,'DEMO-TEST',false).credit,0)});
+test('withdrawal confirms or restores escrow on rejection',()=>{const ok=resolveReceipt(100,[receipt('withdraw')],'DEMO-TEST',true);assert.equal(ok.credit,500);assert.equal(ok.escrow,100);const no=resolveReceipt(100,[receipt('withdraw')],'DEMO-TEST',false);assert.equal(no.credit,0);assert.equal(no.escrow,600)});
+test('circuit payout respects ties and cannot be collected twice',()=>{const c={round:3,scores:[24,24,20,10],log:[],finished:true,claimed:false};const r=collectCircuit(c);assert.equal(r.rank,0);assert.equal(r.credit,500);assert.equal(collectCircuit(r.circuit).credit,0);assert.equal(collectCircuit({...c,finished:false}).rank,-1)});
+test('daily reward is available once per date',()=>{assert.equal(dailyCredit('2026-01-01','2026-01-01'),0);assert.equal(dailyCredit('2026-01-01','2026-01-02'),500)});
+test('circuit evaluates four complete hands and rejects malformed decks',()=>{const r=showdownPoints(deck());assert.equal(r.board.length,5);assert.equal(r.scores.length,4);assert.equal(Math.max(...r.points),10);assert.throws(()=>showdownPoints([]))});
